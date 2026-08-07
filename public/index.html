@@ -52,6 +52,7 @@
   .task-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11.5px;color:var(--ink-soft);}
   .badge{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:2px 7px;border-radius:10px;background:var(--brass-bg);color:var(--brass);white-space:nowrap;}
   .badge.once{background:#E7E4DA;color:var(--ink-soft);}
+  .notes-preview{color:var(--ink-soft);font-size:11.5px;margin-top:4px;line-height:1.4;}
   .due-text{font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
   .status-pill{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;padding:4px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
   .status-overdue{background:var(--rust-bg);color:var(--rust);}
@@ -317,6 +318,13 @@ function render(){
     else { badge.className = 'badge once'; badge.textContent = 'one-time'; }
     meta.appendChild(badge);
     body.appendChild(meta);
+
+    if(t.notes){
+      const notes = document.createElement('div');
+      notes.className = 'notes-preview';
+      notes.textContent = t.notes;
+      body.appendChild(notes);
+    }
 
     const status = document.createElement('span');
     const si = statusInfo(t.dueDate);
