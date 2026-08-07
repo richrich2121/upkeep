@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Upkeep</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#20262F">
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1ECDD; --panel:#FBF8EF; --ink:#20262F; --ink-soft:#666A5D;
+    --brass:#A9762F; --brass-bg:#F1E1C2; --rust:#B3452F; --rust-bg:#F6DCD4;
+    --moss:#4C7357; --moss-bg:#DCE7DA; --line:#DCD4BC; --line-strong:#C8BE9F;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:760px;margin:0 auto;padding:24px 16px 90px;}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:12px;}
+  .brandmark{display:flex;align-items:center;gap:9px;}
+  .brandmark .dot{width:13px;height:13px;border-radius:50%;background:var(--brass);flex-shrink:0;}
+  h1{font-family:'Big Shoulders',sans-serif;font-weight:700;font-size:30px;margin:0;line-height:1;text-transform:uppercase;}
+  .tagline{font-size:11.5px;color:var(--ink-soft);margin-top:3px;font-family:'IBM Plex Mono',monospace;}
+  .datestamp{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);text-align:right;}
+  .headerbtns{display:flex;gap:6px;margin-top:8px;justify-content:flex-end;}
+  .ghost-btn{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:5px 8px;border-radius:4px;border:1px solid var(--line-strong);background:var(--panel);color:var(--ink-soft);cursor:pointer;}
+  .ghost-btn.on{background:var(--moss-bg);color:var(--moss);border-color:var(--moss);}
+
+  .addbtn{margin-top:16px;width:100%;background:var(--ink);color:var(--paper);border:none;border-radius:3px;padding:13px 18px;font-weight:600;font-size:14.5px;cursor:pointer;}
+
+  .tabs{display:flex;gap:6px;overflow-x:auto;margin:18px 0 4px;padding-bottom:2px;}
+  .tab{flex:none;padding:8px 13px;border:1px solid var(--line-strong);border-radius:20px;font-size:12.5px;font-weight:500;color:var(--ink-soft);background:var(--panel);cursor:pointer;white-space:nowrap;}
+  .tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .tab .cnt{opacity:0.7;margin-left:4px;}
+
+  .banner{margin-top:12px;border-radius:4px;padding:10px 13px;font-size:12.5px;font-weight:500;display:none;}
+  .banner.show{display:block;}
+  .banner.rust{background:var(--rust-bg);border:1px solid var(--rust);color:var(--rust);}
+  .banner.brass{background:var(--brass-bg);border:1px solid var(--brass);color:var(--brass);}
+
+  .section-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-soft);margin:18px 0 8px;}
+
+  .task{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px 13px;margin-bottom:8px;}
+  .task.overdue{border-color:var(--rust);}
+  .dial{width:26px;height:26px;border-radius:50%;flex-shrink:0;}
+  .task-body{flex:1;min-width:0;}
+  .task-title{font-weight:600;font-size:14.5px;margin:0 0 3px;}
+  .task-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11.5px;color:var(--ink-soft);}
+  .badge{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:2px 7px;border-radius:10px;background:var(--brass-bg);color:var(--brass);white-space:nowrap;}
+  .badge.once{background:#E7E4DA;color:var(--ink-soft);}
+  .due-text{font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+  .status-pill{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;padding:4px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+  .status-overdue{background:var(--rust-bg);color:var(--rust);}
+  .status-today{background:var(--brass-bg);color:var(--brass);}
+  .status-soon,.status-later{background:#E7E4DA;color:var(--ink-soft);}
+  .actions{display:flex;gap:4px;flex-shrink:0;}
+  .icon-btn{width:27px;height:27px;border:1px solid var(--line-strong);background:var(--panel);border-radius:4px;cursor:pointer;font-size:13px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
+  .icon-btn.done-btn:hover{background:var(--moss-bg);color:var(--moss);border-color:var(--moss);}
+  .icon-btn.del-btn:hover{background:var(--rust-bg);color:var(--rust);border-color:var(--rust);}
+  .empty{text-align:center;padding:44px 18px;color:var(--ink-soft);font-size:13px;border:1px dashed var(--line-strong);border-radius:6px;margin-top:12px;}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(32,38,47,0.45);align-items:flex-start;justify-content:center;padding:32px 14px;overflow-y:auto;z-index:50;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--panel);border-radius:6px;max-width:440px;width:100%;padding:20px 20px 18px;border:1px solid var(--line-strong);}
+  .modal h2{font-family:'Big Shoulders',sans-serif;text-transform:uppercase;font-size:19px;margin:0 0 14px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:11.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+  .field input,.field select,.field textarea{width:100%;padding:9px 10px;border:1px solid var(--line-strong);border-radius:4px;font-family:'Inter',sans-serif;font-size:14px;background:var(--paper);color:var(--ink);}
+  .field textarea{resize:vertical;min-height:46px;}
+  .row2{display:flex;gap:10px;}
+  .row2 > div{flex:1;}
+  .type-toggle{display:flex;gap:8px;margin-bottom:12px;}
+  .type-toggle button{flex:1;padding:9px;border:1px solid var(--line-strong);background:var(--paper);border-radius:4px;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink-soft);}
+  .type-toggle button.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .modal-actions{display:flex;gap:8px;margin-top:16px;}
+  .modal-actions button{flex:1;padding:11px;border-radius:4px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid var(--line-strong);}
+  .btn-cancel{background:var(--panel);color:var(--ink-soft);}
+  .btn-save{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .custom-recur{display:none;gap:8px;margin-top:8px;}
+  .custom-recur.show{display:flex;}
+  .hint{font-size:11px;color:var(--ink-soft);margin-top:4px;}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);}
+  .toggle-row:last-child{border-bottom:none;}
+  .toggle-row span{font-size:13.5px;}
+  .switch{position:relative;width:40px;height:22px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:var(--line-strong);border-radius:22px;cursor:pointer;transition:0.15s;}
+  .slider::before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:var(--panel);border-radius:50%;transition:0.15s;}
+  input:checked + .slider{background:var(--moss);}
+  input:checked + .slider::before{transform:translateX(18px);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brandmark"><span class="dot"></span><h1>Upkeep</h1></div>
+      <div class="tagline">the nagging task assistant</div>
+    </div>
+    <div>
+      <div class="datestamp" id="todayStamp"></div>
+      <div class="headerbtns">
+        <button class="ghost-btn" id="notifBtn">🔔 Enable alerts</button>
+        <button class="ghost-btn" id="settingsBtn">⚙ Settings</button>
+      </div>
+    </div>
+  </header>
+
+  <button class="addbtn" id="openAdd">+ Add a task</button>
+
+  <div class="banner rust" id="overdueBanner"></div>
+  <div class="banner brass" id="statusBanner"></div>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="listArea"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">New task</h2>
+    <div class="type-toggle">
+      <button type="button" id="typeOnce" class="active">One-time</button>
+      <button type="button" id="typeRecurring">Recurring</button>
+    </div>
+    <div class="field"><label>Title</label><input type="text" id="fTitle" placeholder="e.g. Change car oil"></div>
+    <div class="field"><label id="dueLabel">Due date</label><input type="date" id="fDue"></div>
+    <div class="field" id="recurField" style="display:none">
+      <label>Repeats</label>
+      <select id="fPreset"></select>
+      <div class="custom-recur" id="customRecur">
+        <div style="flex:1"><input type="number" min="1" id="fEvery" placeholder="Every"></div>
+        <div style="flex:2"><select id="fUnit">
+          <option value="day">Day(s)</option><option value="week">Week(s)</option>
+          <option value="month">Month(s)</option><option value="year">Year(s)</option>
+        </select></div>
+      </div>
+      <div class="hint">"3 times a month" etc are converted to an even day interval automatically.</div>
+    </div>
+    <div class="field"><label>Notes (optional)</label><textarea id="fNotes"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cancelBtn">Cancel</button>
+      <button class="btn-save" id="saveBtn">Save task</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsOverlay">
+  <div class="modal">
+    <h2>Reminder settings</h2>
+    <div class="toggle-row">
+      <span>Nag me about pending tasks</span>
+      <label class="switch"><input type="checkbox" id="sEnabled"><span class="slider"></span></label>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>Remind me roughly every</label>
+      <select id="sInterval">
+        <option value="15">15 minutes</option>
+        <option value="30">30 minutes</option>
+        <option value="60">1 hour</option>
+        <option value="90">1.5 hours</option>
+        <option value="120">2 hours</option>
+        <option value="180">3 hours</option>
+        <option value="240">4 hours</option>
+      </select>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Active from</label><input type="time" id="sQuietStart"></div>
+      <div class="field"><label>Active until</label><input type="time" id="sQuietEnd"></div>
+    </div>
+    <div class="field"><label>Evening wrap-up time</label><input type="time" id="sEveningTime"></div>
+    <div class="toggle-row">
+      <span>Surprise me with a random pending task (vs. just a count)</span>
+      <label class="switch"><input type="checkbox" id="sRandom"><span class="slider"></span></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="settingsCancel">Close</button>
+      <button class="btn-save" id="settingsSave">Save settings</button>
+    </div>
+    <button class="ghost-btn" id="testNotifBtn" style="width:100%;margin-top:10px;padding:9px;">Send a test notification</button>
+  </div>
+</div>
+
+<script>
+const PRESETS = [
+  {key:'day1', label:'Every day', every:1, unit:'day'},
+  {key:'week1', label:'Every week', every:1, unit:'week'},
+  {key:'week2', label:'Every 2 weeks', every:2, unit:'week'},
+  {key:'month1', label:'Every month', every:1, unit:'month'},
+  {key:'month3', label:'Every 3 months', every:3, unit:'month'},
+  {key:'month6', label:'Every 6 months', every:6, unit:'month'},
+  {key:'year1', label:'Every year', every:1, unit:'year'},
+  {key:'2xweek', label:'2x a week', every:3, unit:'day', freqLabel:'2x/week'},
+  {key:'3xweek', label:'3x a week', every:2, unit:'day', freqLabel:'3x/week'},
+  {key:'2xmonth', label:'2x a month', every:15, unit:'day', freqLabel:'2x/month'},
+  {key:'3xmonth', label:'3x a month', every:10, unit:'day', freqLabel:'3x/month'},
+  {key:'4xmonth', label:'4x a month', every:7, unit:'day', freqLabel:'4x/month'},
+  {key:'custom', label:'Custom…', custom:true},
+];
+const TABS = [
+  {key:'overdue', label:'Overdue'}, {key:'today', label:'Today'}, {key:'tomorrow', label:'Tomorrow'},
+  {key:'dayafter', label:'Day after'}, {key:'week', label:'This week'}, {key:'month', label:'This month'}, {key:'all', label:'All'},
+];
+
+let tasks = [];
+let editingId = null;
+let currentTab = 'today';
+let currentType = 'once';
+
+function pad(n){return n<10?'0'+n:''+n;}
+function toStr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function parseStr(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function todayDate(){const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate());}
+function addDays(dateObj,n){const d=new Date(dateObj);d.setDate(d.getDate()+n);return d;}
+function addInterval(dateStr, every, unit){
+  const d = parseStr(dateStr);
+  if(unit==='day') d.setDate(d.getDate()+every);
+  else if(unit==='week') d.setDate(d.getDate()+every*7);
+  else if(unit==='month') d.setMonth(d.getMonth()+every);
+  else if(unit==='year') d.setFullYear(d.getFullYear()+every);
+  return toStr(d);
+}
+function diffDays(dateStr){ return Math.round((parseStr(dateStr) - todayDate()) / 86400000); }
+function fmtDate(dateStr){ return parseStr(dateStr).toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric'}); }
+function weekRange(){
+  const t = todayDate(); const day = t.getDay(); const diffToMon = day===0 ? -6 : 1-day;
+  const mon = addDays(t, diffToMon); const sun = addDays(mon, 6);
+  return [toStr(mon), toStr(sun)];
+}
+function monthRange(){
+  const t = todayDate();
+  return [toStr(new Date(t.getFullYear(), t.getMonth(), 1)), toStr(new Date(t.getFullYear(), t.getMonth()+1, 0))];
+}
+
+async function api(path, opts){
+  const res = await fetch(path, Object.assign({headers:{'Content-Type':'application/json'}}, opts));
+  if(!res.ok) throw new Error('request failed: '+path);
+  return res.status===204 ? null : res.json();
+}
+async function loadTasks(){ tasks = await api('/api/tasks'); }
+
+function recurrenceLabel(t){
+  if(!t.recurring) return null;
+  if(t.freqLabel) return t.freqLabel;
+  const u = t.unit + (t.every>1?'s':'');
+  return 'every ' + (t.every===1?'':t.every+' ') + u;
+}
+function statusInfo(dateStr){
+  const dd = diffDays(dateStr);
+  if(dd<0) return {cls:'status-overdue', text:'overdue '+Math.abs(dd)+'d'};
+  if(dd===0) return {cls:'status-today', text:'today'};
+  if(dd===1) return {cls:'status-today', text:'tomorrow'};
+  if(dd<=6) return {cls:'status-soon', text:'in '+dd+'d'};
+  return {cls:'status-later', text:'in '+dd+'d'};
+}
+function dialColor(dateStr){
+  const dd = diffDays(dateStr);
+  if(dd<0) return 'var(--rust)';
+  if(dd<=1) return 'var(--brass)';
+  return 'var(--line-strong)';
+}
+function activeTasks(){ return tasks.filter(t=>!t.done); }
+function bucketTasks(key){
+  const list = activeTasks();
+  if(key==='overdue') return list.filter(x=>diffDays(x.dueDate)<0);
+  if(key==='today') return list.filter(x=>diffDays(x.dueDate)===0);
+  if(key==='tomorrow') return list.filter(x=>diffDays(x.dueDate)===1);
+  if(key==='dayafter') return list.filter(x=>diffDays(x.dueDate)===2);
+  if(key==='week'){ const [s,e]=weekRange(); return list.filter(x=>x.dueDate>=s && x.dueDate<=e); }
+  if(key==='month'){ const [s,e]=monthRange(); return list.filter(x=>x.dueDate>=s && x.dueDate<=e); }
+  if(key==='all') return list.slice();
+  return [];
+}
+
+function render(){
+  document.getElementById('todayStamp').textContent = todayDate().toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'});
+  const overdueCount = bucketTasks('overdue').length;
+  const banner = document.getElementById('overdueBanner');
+  if(overdueCount>0){ banner.textContent = overdueCount + (overdueCount===1?' task is':' tasks are') + ' overdue.'; banner.classList.add('show'); }
+  else banner.classList.remove('show');
+
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = '';
+  TABS.forEach(tb=>{
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (tb.key===currentTab?' active':'');
+    const cnt = bucketTasks(tb.key).length;
+    btn.innerHTML = tb.label + (cnt>0 ? ' <span class="cnt">'+cnt+'</span>' : '');
+    btn.onclick = ()=>{ currentTab = tb.key; render(); };
+    tabsEl.appendChild(btn);
+  });
+
+  const listArea = document.getElementById('listArea');
+  listArea.innerHTML = '';
+  let list = bucketTasks(currentTab).sort((a,b)=> a.dueDate < b.dueDate ? -1 : 1);
+  if(list.length===0){ listArea.innerHTML = '<div class="empty">Nothing due here. Add a task to get started.</div>'; return; }
+
+  list.forEach(t=>{
+    const row = document.createElement('div');
+    const dd = diffDays(t.dueDate);
+    row.className = 'task' + (dd<0 ? ' overdue' : '');
+
+    const dial = document.createElement('div'); dial.className = 'dial'; dial.style.background = dialColor(t.dueDate);
+
+    const body = document.createElement('div'); body.className = 'task-body';
+    const title = document.createElement('p'); title.className = 'task-title'; title.textContent = t.title;
+    body.appendChild(title);
+
+    const meta = document.createElement('div'); meta.className = 'task-meta';
+    const dueSpan = document.createElement('span'); dueSpan.className = 'due-text'; dueSpan.textContent = fmtDate(t.dueDate);
+    meta.appendChild(dueSpan);
+    const badge = document.createElement('span');
+    if(t.recurring){ badge.className = 'badge'; badge.textContent = '⟳ ' + recurrenceLabel(t); }
+    else { badge.className = 'badge once'; badge.textContent = 'one-time'; }
+    meta.appendChild(badge);
+    body.appendChild(meta);
+
+    const status = document.createElement('span');
+    const si = statusInfo(t.dueDate);
+    status.className = 'status-pill ' + si.cls; status.textContent = si.text;
+
+    const actions = document.createElement('div'); actions.className = 'actions';
+    const doneBtn = document.createElement('button'); doneBtn.className = 'icon-btn done-btn'; doneBtn.textContent = '✓';
+    doneBtn.onclick = ()=> completeTask(t.id);
+    const editBtn = document.createElement('button'); editBtn.className = 'icon-btn'; editBtn.textContent = '✎';
+    editBtn.onclick = ()=> openEdit(t.id);
+    const delBtn = document.createElement('button'); delBtn.className = 'icon-btn del-btn'; delBtn.textContent = '✕';
+    delBtn.onclick = ()=> deleteTask(t.id);
+    actions.appendChild(doneBtn); actions.appendChild(editBtn); actions.appendChild(delBtn);
+
+    row.appendChild(dial); row.appendChild(body); row.appendChild(status); row.appendChild(actions);
+    listArea.appendChild(row);
+  });
+}
+
+async function completeTask(id){ await api('/api/tasks/'+id+'/complete', {method:'POST'}); await loadTasks(); render(); }
+async function deleteTask(id){ if(!confirm('Delete this task?')) return; await api('/api/tasks/'+id, {method:'DELETE'}); await loadTasks(); render(); }
+
+function populatePresets(){
+  const sel = document.getElementById('fPreset'); sel.innerHTML = '';
+  PRESETS.forEach(p=>{ const opt = document.createElement('option'); opt.value = p.key; opt.textContent = p.label; sel.appendChild(opt); });
+  sel.onchange = ()=> document.getElementById('customRecur').classList.toggle('show', sel.value==='custom');
+}
+function setType(type){
+  currentType = type;
+  document.getElementById('typeOnce').classList.toggle('active', type==='once');
+  document.getElementById('typeRecurring').classList.toggle('active', type==='recurring');
+  document.getElementById('recurField').style.display = type==='recurring' ? 'block' : 'none';
+  document.getElementById('dueLabel').textContent = type==='recurring' ? 'Next due date' : 'Due date';
+}
+function openAddModal(){
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'New task';
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fDue').value = toStr(todayDate());
+  document.getElementById('fNotes').value = '';
+  document.getElementById('fPreset').value = 'month6';
+  document.getElementById('customRecur').classList.remove('show');
+  setType('once');
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function openEdit(id){
+  const t = tasks.find(x=>x.id===id); if(!t) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit task';
+  document.getElementById('fTitle').value = t.title;
+  document.getElementById('fDue').value = t.dueDate;
+  document.getElementById('fNotes').value = t.notes || '';
+  setType(t.recurring ? 'recurring' : 'once');
+  if(t.recurring){
+    const match = PRESETS.find(p=>!p.custom && p.every===t.every && p.unit===t.unit && p.freqLabel===t.freqLabel);
+    if(match){ document.getElementById('fPreset').value = match.key; document.getElementById('customRecur').classList.remove('show'); }
+    else {
+      document.getElementById('fPreset').value = 'custom';
+      document.getElementById('customRecur').classList.add('show');
+      document.getElementById('fEvery').value = t.every; document.getElementById('fUnit').value = t.unit;
+    }
+  }
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
+
+async function saveTask(){
+  const title = document.getElementById('fTitle').value.trim();
+  const due = document.getElementById('fDue').value;
+  const notes = document.getElementById('fNotes').value.trim();
+  if(!title){ alert('Give the task a title.'); return; }
+  if(!due){ alert('Pick a due date.'); return; }
+  let taskData = { title, dueDate: due, notes, recurring: currentType==='recurring' };
+  if(taskData.recurring){
+    const presetKey = document.getElementById('fPreset').value;
+    const preset = PRESETS.find(p=>p.key===presetKey);
+    if(preset.custom){
+      const every = parseInt(document.getElementById('fEvery').value, 10);
+      const unit = document.getElementById('fUnit').value;
+      if(!every || every<1){ alert('Enter a valid repeat interval.'); return; }
+      taskData.every = every; taskData.unit = unit; taskData.freqLabel = null;
+    } else {
+      taskData.every = preset.every; taskData.unit = preset.unit; taskData.freqLabel = preset.freqLabel || null;
+    }
+  }
+  if(editingId) await api('/api/tasks/'+editingId, {method:'PUT', body: JSON.stringify(taskData)});
+  else await api('/api/tasks', {method:'POST', body: JSON.stringify(taskData)});
+  await loadTasks(); closeModal(); render();
+}
+
+document.getElementById('openAdd').onclick = openAddModal;
+document.getElementById('cancelBtn').onclick = closeModal;
+document.getElementById('saveBtn').onclick = saveTask;
+document.getElementById('typeOnce').onclick = ()=> setType('once');
+document.getElementById('typeRecurring').onclick = ()=> setType('recurring');
+document.getElementById('modalOverlay').onclick = (e)=>{ if(e.target.id==='modalOverlay') closeModal(); };
+
+// ---------------- settings ----------------
+async function loadSettings(){ return api('/api/settings'); }
+async function openSettings(){
+  const s = await loadSettings();
+  document.getElementById('sEnabled').checked = s.enabled;
+  document.getElementById('sInterval').value = s.intervalMinutes;
+  document.getElementById('sQuietStart').value = s.quietStart;
+  document.getElementById('sQuietEnd').value = s.quietEnd;
+  document.getElementById('sEveningTime').value = s.eveningTime;
+  document.getElementById('sRandom').checked = s.randomMode;
+  document.getElementById('settingsOverlay').classList.add('show');
+}
+document.getElementById('settingsBtn').onclick = openSettings;
+document.getElementById('settingsCancel').onclick = ()=> document.getElementById('settingsOverlay').classList.remove('show');
+document.getElementById('settingsOverlay').onclick = (e)=>{ if(e.target.id==='settingsOverlay') e.currentTarget.classList.remove('show'); };
+document.getElementById('settingsSave').onclick = async ()=>{
+  await api('/api/settings', {method:'POST', body: JSON.stringify({
+    enabled: document.getElementById('sEnabled').checked,
+    intervalMinutes: parseInt(document.getElementById('sInterval').value,10),
+    quietStart: document.getElementById('sQuietStart').value,
+    quietEnd: document.getElementById('sQuietEnd').value,
+    eveningTime: document.getElementById('sEveningTime').value,
+    randomMode: document.getElementById('sRandom').checked
+  })});
+  document.getElementById('settingsOverlay').classList.remove('show');
+  showStatus('Settings saved.');
+};
+document.getElementById('testNotifBtn').onclick = async ()=>{
+  const r = await api('/api/test-notification', {method:'POST'});
+  showStatus(r.sent ? 'Test notification sent.' : 'Could not send — enable alerts first.');
+};
+
+function showStatus(msg){
+  const b = document.getElementById('statusBanner');
+  b.textContent = msg; b.classList.add('show');
+  setTimeout(()=> b.classList.remove('show'), 3500);
+}
+
+// ---------------- push subscription ----------------
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+async function enableAlerts(){
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+    alert('This browser does not support push notifications. On Android, use Chrome.');
+    return;
+  }
+  const reg = await navigator.serviceWorker.register('/sw.js');
+  const perm = await Notification.requestPermission();
+  if(perm !== 'granted'){ showStatus('Notification permission was not granted.'); return; }
+  const { key } = await api('/api/vapid-public-key');
+  if(!key){ alert('Server has no VAPID key configured yet — see the README.'); return; }
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(key) });
+  await api('/api/subscribe', {method:'POST', body: JSON.stringify(sub)});
+  document.getElementById('notifBtn').classList.add('on');
+  document.getElementById('notifBtn').textContent = '🔔 Alerts on';
+  showStatus('Alerts enabled. Upkeep will start nagging you.');
+}
+document.getElementById('notifBtn').onclick = enableAlerts;
+
+(async ()=>{
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  if('Notification' in window && Notification.permission === 'granted'){
+    document.getElementById('notifBtn').classList.add('on');
+    document.getElementById('notifBtn').textContent = '🔔 Alerts on';
+  }
+  populatePresets();
+  await loadTasks();
+  render();
+})();
+</script>
+</body>
+</html>

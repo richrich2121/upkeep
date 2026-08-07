@@ -1,0 +1,16 @@
+{
+  "name": "upkeep-app",
+  "version": "1.0.0",
+  "description": "A nagging task assistant PWA - reminds you about pending tasks on a customizable cadence instead of fixed schedules.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "generate-vapid": "node generate-vapid.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "web-push": "^3.6.7",
+    "node-cron": "^3.0.3"
+  }
+}
