@@ -41,13 +41,21 @@ function defaultData() {
 }
 
 async function loadData() {
-  if (!UPSTASH_URL || !UPSTASH_TOKEN) return defaultData();
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) {
+    console.warn('No Upstash configured, using in-memory defaults');
+    return defaultData();
+  }
   try {
     const res = await fetch(`${UPSTASH_URL}/get/${DATA_KEY}`, {
       headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
     });
     const json = await res.json();
-    if (json.result) return JSON.parse(json.result);
+    if (json.result) {
+      const parsed = JSON.parse(json.result);
+      console.log('Loaded from Upstash: ' + parsed.tasks.length + ' tasks');
+      return parsed;
+    }
+    console.log('No existing Upstash data found, starting fresh');
     const d = defaultData();
     await persistData(d);
     return d;
@@ -58,13 +66,22 @@ async function loadData() {
 }
 
 async function persistData(d) {
-  if (!UPSTASH_URL || !UPSTASH_TOKEN) return;
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) {
+    console.warn('Skipped saving: UPSTASH_REDIS_REST_URL/TOKEN not set');
+    return;
+  }
   try {
-    await fetch(`${UPSTASH_URL}/set/${DATA_KEY}`, {
+    const res = await fetch(`${UPSTASH_URL}/set/${DATA_KEY}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, 'Content-Type': 'text/plain' },
       body: JSON.stringify(d)
     });
+    const json = await res.json();
+    if (json.result === 'OK') {
+      console.log('Saved to Upstash OK (' + d.tasks.length + ' tasks)');
+    } else {
+      console.error('Upstash save returned unexpected response:', JSON.stringify(json));
+    }
   } catch (e) {
     console.error('Upstash save failed', e);
   }
@@ -275,5 +292,4 @@ app.listen(PORT, () => console.log('Upkeep server listening on port ' + PORT + '
 
 loadData().then(d => {
   data = d;
-  console.log('Upkeep data loaded' + (UPSTASH_URL ? ' from Upstash' : ' (in-memory only, no Upstash configured)'));
 }).catch(e => console.error('Failed to load data on startup', e));
