@@ -1,23 +1,28 @@
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
 const webpush = require('web-push');
 const cron = require('node-cron');
 
-const DATA_FILE = path.join(__dirname, 'data.json');
 const PORT = process.env.PORT || 3000;
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_CONTACT = process.env.VAPID_CONTACT || 'mailto:you@example.com';
 
+const UPSTASH_URL = (process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/$/, '');
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || '';
+const DATA_KEY = 'upkeep-data';
+
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_CONTACT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 } else {
   console.warn('VAPID keys are not set. Run `npm run generate-vapid` and set the env vars, or push notifications will fail.');
 }
+if (!UPSTASH_URL || !UPSTASH_TOKEN) {
+  console.warn('UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are not set. Tasks will only live in memory and will be lost on restart. See README.');
+}
 
-// ---------- tiny JSON "database" ----------
+// ---------- data layer: in-memory cache, write-through to Upstash Redis ----------
 function defaultData() {
   return {
     tasks: [],
@@ -35,27 +40,38 @@ function defaultData() {
   };
 }
 
-function loadData() {
-  if (!fs.existsSync(DATA_FILE)) {
-    const d = defaultData();
-    fs.writeFileSync(DATA_FILE, JSON.stringify(d, null, 2));
-    return d;
-  }
+async function loadData() {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) return defaultData();
   try {
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  } catch (e) {
-    console.error('data.json was unreadable, resetting to defaults', e);
+    const res = await fetch(`${UPSTASH_URL}/get/${DATA_KEY}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+    });
+    const json = await res.json();
+    if (json.result) return JSON.parse(json.result);
     const d = defaultData();
-    fs.writeFileSync(DATA_FILE, JSON.stringify(d, null, 2));
+    await persistData(d);
     return d;
+  } catch (e) {
+    console.error('Upstash load failed, starting from defaults', e);
+    return defaultData();
   }
 }
 
-function saveData(d) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(d, null, 2));
+async function persistData(d) {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) return;
+  try {
+    await fetch(`${UPSTASH_URL}/set/${DATA_KEY}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, 'Content-Type': 'text/plain' },
+      body: JSON.stringify(d)
+    });
+  } catch (e) {
+    console.error('Upstash save failed', e);
+  }
 }
 
-let data = loadData();
+let data = defaultData();
+function saveData(d) { persistData(d).catch(() => {}); }
 
 // ---------- date helpers (local calendar dates as YYYY-MM-DD strings) ----------
 function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -255,4 +271,9 @@ app.post('/api/test-notification', async (req, res) => {
   res.json({ sent });
 });
 
-app.listen(PORT, () => console.log('Upkeep server running on port ' + PORT));
+app.listen(PORT, () => console.log('Upkeep server listening on port ' + PORT + ' (loading data...)'));
+
+loadData().then(d => {
+  data = d;
+  console.log('Upkeep data loaded' + (UPSTASH_URL ? ' from Upstash' : ' (in-memory only, no Upstash configured)'));
+}).catch(e => console.error('Failed to load data on startup', e));

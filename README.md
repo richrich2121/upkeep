@@ -48,7 +48,26 @@ npm start
 
 Visit `http://localhost:3000` — the task app should load.
 
-## 2. Deploy somewhere that stays running
+## 2. Set up free, permanent task storage (Upstash)
+
+Render's free tier wipes its local disk on every redeploy, restart, *and* spin-down —
+so storing tasks in a plain file (like this app originally did) means you'd
+periodically lose your task list for free. Instead, tasks are now stored in
+a free Upstash Redis database, which persists indefinitely and doesn't
+expire.
+
+1. Go to [upstash.com](https://upstash.com) and sign up (free, no credit card).
+2. Click **Create Database**, give it any name, pick a region close to you.
+3. On the database's page, find the **REST API** section and copy two values:
+   `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+4. Add both as environment variables on Render (same place you added the
+   VAPID keys), alongside your existing three.
+
+If these two variables aren't set, the app still runs — it just falls back
+to in-memory storage that's lost on every restart, same as before. A
+warning is logged on startup if this happens.
+
+## 3. Deploy somewhere that stays running
 
 Push notifications only fire if the server is actually alive when the minute
 ticks over — it needs real (always-on) hosting, not a serverless function
@@ -67,14 +86,13 @@ General steps for Render:
    `VAPID_CONTACT`.
 5. Deploy. You'll get a URL like `https://upkeep-yourname.onrender.com`.
 
-**Important:** `data.json` is a plain file on disk. On most free hosts the
-filesystem is wiped on every redeploy/restart. That's fine for trying it out,
-but if you want tasks to actually persist long-term, either enable a
-persistent disk (Render offers this on paid plans) or swap the `loadData`/
-`saveData` functions in `server.js` for a real database later — the rest of
-the app doesn't care where the data lives.
+**Important:** Tasks now live in Upstash Redis, not in a local file, so they
+survive redeploys and restarts as long as `UPSTASH_REDIS_REST_URL` and
+`UPSTASH_REDIS_REST_TOKEN` are set correctly (see step 2 above). If you skip
+Upstash setup, the app still works but reverts to in-memory storage that
+resets whenever the service restarts or spins down.
 
-## 3. Install it on your Android phone
+## 4. Install it on your Android phone
 
 1. Open the deployed URL in **Chrome** on your phone.
 2. Tap the **⋮** menu → **Add to Home screen** (or Chrome will prompt you).
