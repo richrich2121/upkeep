@@ -125,24 +125,4 @@ function withinWindow(now, targetHM, windowMinutes) {
   const [h, m] = targetHM.split(':').map(Number);
   const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
   const diffMin = (now - target) / 60000;
-  return diffMin >= 0 && diffMin < windowMinutes;
-}
-
-// ---------- push sending ----------
-async function sendPush(payload) {
-  if (!data.subscription) return false;
-  try {
-    await webpush.sendNotification(data.subscription, JSON.stringify(payload));
-    return true;
-  } catch (e) {
-    console.error('Push failed', e.statusCode || e.message);
-    if (e.statusCode === 404 || e.statusCode === 410) {
-      data.subscription = null; // subscription expired/revoked, clear it
-      saveData(data);
-    }
-    return false;
-  }
-}
-
-// ---------- the nag brain ----------
-async function
+  return diffMin >= 0 && diffMin <
