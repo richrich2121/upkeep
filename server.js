@@ -107,6 +107,13 @@ function addInterval(dateStr, every, unit) {
 }
 function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2, 8); }
 
+// applies +/-15% random variation to an interval so nudges don't feel like a metronome
+function jitterMinutes(baseMinutes) {
+  const variation = 0.15;
+  const factor = 1 + (Math.random() * 2 - 1) * variation; // between 0.85x and 1.15x
+  return Math.round(baseMinutes * factor);
+}
+
 function pendingTasks() {
   const t = todayStr();
   return data.tasks.filter(x => !x.done && x.dueDate <= t);
@@ -193,8 +200,10 @@ async function nagCheck() {
   const sent = await sendPush({ title, body, taskId });
   console.log('[nag] push send result: ' + sent);
   if (sent) {
+    const jittered = jitterMinutes(settings.intervalMinutes);
     data.nag.lastSentAt = now.toISOString();
-    data.nag.nextEligibleAt = new Date(now.getTime() + settings.intervalMinutes * 60000).toISOString();
+    data.nag.nextEligibleAt = new Date(now.getTime() + jittered * 60000).toISOString();
+    console.log('[nag] next check in ~' + jittered + ' min (base ' + settings.intervalMinutes + ')');
     saveData(data);
   }
 }
@@ -295,9 +304,10 @@ app.post('/api/subscribe', (req, res) => {
 });
 
 app.post('/api/dismiss', (req, res) => {
-  // "remind me later" tap - push the next nag out by a fresh full interval
+  // "remind me later" tap - push the next nag out by a fresh, jittered interval
   const now = new Date();
-  data.nag.nextEligibleAt = new Date(now.getTime() + data.settings.intervalMinutes * 60000).toISOString();
+  const jittered = jitterMinutes(data.settings.intervalMinutes);
+  data.nag.nextEligibleAt = new Date(now.getTime() + jittered * 60000).toISOString();
   saveData(data);
   res.json({ ok: true });
 });
