@@ -107,13 +107,12 @@ function addInterval(dateStr, every, unit) {
 }
 function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2, 8); }
 
-// applies +/-15% random variation to an interval so nudges don't feel like a metronome
+// applies +/-25% random variation to an interval so nudges don't feel like a metronome
 function jitterMinutes(baseMinutes) {
-  const variation = 0.15;
-  const factor = 1 + (Math.random() * 2 - 1) * variation; // between 0.85x and 1.15x
+  const variation = 0.25;
+  const factor = 1 + (Math.random() * 2 - 1) * variation; // between 0.75x and 1.25x
   return Math.round(baseMinutes * factor);
 }
-
 function pendingTasks() {
   const t = todayStr();
   return data.tasks.filter(x => !x.done && x.dueDate <= t);

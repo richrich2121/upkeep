@@ -225,7 +225,7 @@ function addInterval(dateStr, every, unit){
   return toStr(d);
 }
 function diffDays(dateStr){ return Math.round((parseStr(dateStr) - todayDate()) / 86400000); }
-function fmtDate(dateStr){ return parseStr(dateStr).toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric'}); }
+function fmtDate(dateStr){ const d = parseStr(dateStr); return pad(d.getDate()) + '-' + pad(d.getMonth()+1) + '-' + d.getFullYear(); }
 function weekRange(){
   const t = todayDate(); const day = t.getDay(); const diffToMon = day===0 ? -6 : 1-day;
   const mon = addDays(t, diffToMon); const sun = addDays(mon, 6);
