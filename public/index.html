@@ -129,6 +129,17 @@
     </div>
     <div class="field"><label>Title</label><input type="text" id="fTitle" placeholder="e.g. Change car oil"></div>
     <div class="field"><label id="dueLabel">Due date</label><input type="date" id="fDue"></div>
+    <div class="field" id="dateModeField">
+      <div class="type-toggle">
+        <button type="button" id="dateModeExact" class="active">Exact date</button>
+        <button type="button" id="dateModeRange">Random in a range</button>
+      </div>
+    </div>
+    <div class="field" id="rangeDateField" style="display:none">
+      <label>Earliest</label><input type="date" id="fFlexStart">
+      <label style="margin-top:8px;display:block;">Latest</label><input type="date" id="fFlexEnd">
+      <div class="hint">Upkeep will pick a day in this range for you, spreading tasks across less-crowded days instead of piling them up.</div>
+    </div>
     <div class="field" id="recurField" style="display:none">
       <label>Repeats</label>
       <select id="fPreset"></select>
@@ -210,6 +221,7 @@ let tasks = [];
 let editingId = null;
 let currentTab = 'today';
 let currentType = 'once';
+let dateMode = 'exact';
 
 function pad(n){return n<10?'0'+n:''+n;}
 function toStr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
@@ -317,6 +329,12 @@ function render(){
     if(t.recurring){ badge.className = 'badge'; badge.textContent = '⟳ ' + recurrenceLabel(t); }
     else { badge.className = 'badge once'; badge.textContent = 'one-time'; }
     meta.appendChild(badge);
+    if(t.flexStart && t.flexEnd){
+      const flexBadge = document.createElement('span');
+      flexBadge.className = 'badge once';
+      flexBadge.textContent = '🎲 ' + fmtDate(t.flexStart) + ' → ' + fmtDate(t.flexEnd);
+      meta.appendChild(flexBadge);
+    }
     body.appendChild(meta);
 
     if(t.notes){
@@ -352,22 +370,35 @@ function populatePresets(){
   PRESETS.forEach(p=>{ const opt = document.createElement('option'); opt.value = p.key; opt.textContent = p.label; sel.appendChild(opt); });
   sel.onchange = ()=> document.getElementById('customRecur').classList.toggle('show', sel.value==='custom');
 }
+function setDateMode(mode){
+  dateMode = mode;
+  document.getElementById('dateModeExact').classList.toggle('active', mode==='exact');
+  document.getElementById('dateModeRange').classList.toggle('active', mode==='range');
+  document.getElementById('rangeDateField').style.display = mode==='range' ? 'block' : 'none';
+  document.getElementById('fDue').closest('.field').style.display = mode==='range' ? 'none' : 'block';
+}
 function setType(type){
   currentType = type;
   document.getElementById('typeOnce').classList.toggle('active', type==='once');
   document.getElementById('typeRecurring').classList.toggle('active', type==='recurring');
   document.getElementById('recurField').style.display = type==='recurring' ? 'block' : 'none';
   document.getElementById('dueLabel').textContent = type==='recurring' ? 'Next due date' : 'Due date';
+  const showDateModeToggle = (type==='once' && editingId===null);
+  document.getElementById('dateModeField').style.display = showDateModeToggle ? 'block' : 'none';
+  if(!showDateModeToggle){ setDateMode('exact'); }
 }
 function openAddModal(){
   editingId = null;
   document.getElementById('modalTitle').textContent = 'New task';
   document.getElementById('fTitle').value = '';
   document.getElementById('fDue').value = toStr(todayDate());
+  document.getElementById('fFlexStart').value = toStr(todayDate());
+  document.getElementById('fFlexEnd').value = toStr(addDays(todayDate(), 7));
   document.getElementById('fNotes').value = '';
   document.getElementById('fPreset').value = 'month6';
   document.getElementById('customRecur').classList.remove('show');
   setType('once');
+  setDateMode('exact');
   document.getElementById('modalOverlay').classList.add('show');
 }
 function openEdit(id){
@@ -393,11 +424,24 @@ function closeModal(){ document.getElementById('modalOverlay').classList.remove(
 
 async function saveTask(){
   const title = document.getElementById('fTitle').value.trim();
-  const due = document.getElementById('fDue').value;
   const notes = document.getElementById('fNotes').value.trim();
   if(!title){ alert('Give the task a title.'); return; }
-  if(!due){ alert('Pick a due date.'); return; }
-  let taskData = { title, dueDate: due, notes, recurring: currentType==='recurring' };
+
+  let taskData = { title, notes, recurring: currentType==='recurring' };
+
+  if(currentType==='once' && dateMode==='range' && editingId===null){
+    const flexStart = document.getElementById('fFlexStart').value;
+    const flexEnd = document.getElementById('fFlexEnd').value;
+    if(!flexStart || !flexEnd){ alert('Pick both ends of the range.'); return; }
+    if(flexStart > flexEnd){ alert('Earliest date must be on or before the latest date.'); return; }
+    taskData.flexStart = flexStart;
+    taskData.flexEnd = flexEnd;
+  } else {
+    const due = document.getElementById('fDue').value;
+    if(!due){ alert('Pick a due date.'); return; }
+    taskData.dueDate = due;
+  }
+
   if(taskData.recurring){
     const presetKey = document.getElementById('fPreset').value;
     const preset = PRESETS.find(p=>p.key===presetKey);
@@ -420,6 +464,8 @@ document.getElementById('cancelBtn').onclick = closeModal;
 document.getElementById('saveBtn').onclick = saveTask;
 document.getElementById('typeOnce').onclick = ()=> setType('once');
 document.getElementById('typeRecurring').onclick = ()=> setType('recurring');
+document.getElementById('dateModeExact').onclick = ()=> setDateMode('exact');
+document.getElementById('dateModeRange').onclick = ()=> setDateMode('range');
 document.getElementById('modalOverlay').onclick = (e)=>{ if(e.target.id==='modalOverlay') closeModal(); };
 
 // ---------------- settings ----------------

@@ -107,6 +107,29 @@ function addInterval(dateStr, every, unit) {
 }
 function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2, 8); }
 
+// Picks a date within [rangeStart, rangeEnd] for a "sometime in this window" task.
+// Instead of pure random (which can pile several tasks onto the same day), it looks at how
+// many active tasks are already sitting on each candidate day and picks among the least-loaded ones.
+function pickBalancedDate(rangeStart, rangeEnd) {
+  const dates = [];
+  let cur = parseStr(rangeStart);
+  const end = parseStr(rangeEnd);
+  while (cur <= end) {
+    dates.push(toStr(cur));
+    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 1);
+  }
+  if (dates.length === 0) return rangeStart;
+
+  const counts = {};
+  dates.forEach(ds => { counts[ds] = 0; });
+  data.tasks.forEach(t => {
+    if (!t.done && Object.prototype.hasOwnProperty.call(counts, t.dueDate)) counts[t.dueDate]++;
+  });
+
+  const minCount = Math.min(...dates.map(ds => counts[ds]));
+  const candidates = dates.filter(ds => counts[ds] === minCount);
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
 // applies +/-25% random variation to an interval so nudges don't feel like a metronome
 function jitterMinutes(baseMinutes) {
   const variation = 0.25;
@@ -249,6 +272,9 @@ app.get('/api/tasks', (req, res) => res.json(data.tasks));
 
 app.post('/api/tasks', (req, res) => {
   const t = req.body;
+  if (!t.recurring && t.flexStart && t.flexEnd) {
+    t.dueDate = pickBalancedDate(t.flexStart, t.flexEnd);
+  }
   t.id = uid();
   t.done = false;
   t.createdAt = todayStr();
