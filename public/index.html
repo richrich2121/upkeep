@@ -52,8 +52,8 @@
   .task-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11.5px;color:var(--ink-soft);}
   .badge{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:2px 7px;border-radius:10px;background:var(--brass-bg);color:var(--brass);white-space:nowrap;}
   .badge.once{background:#E7E4DA;color:var(--ink-soft);}
-  .notes-preview{color:var(--ink-soft);font-size:11.5px;margin-top:4px;line-height:1.4;}
   .due-text{font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+  .notes-preview{color:var(--ink-soft);font-size:11.5px;margin-top:4px;line-height:1.4;}
   .status-pill{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;padding:4px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
   .status-overdue{background:var(--rust-bg);color:var(--rust);}
   .status-today{background:var(--brass-bg);color:var(--brass);}
@@ -93,6 +93,9 @@
   .slider::before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:var(--panel);border-radius:50%;transition:0.15s;}
   input:checked + .slider{background:var(--moss);}
   input:checked + .slider::before{transform:translateX(18px);}
+  .sub-status{font-size:12px;padding:8px 10px;border-radius:4px;margin-bottom:12px;border:1px solid var(--line-strong);}
+  .sub-status.ok{background:var(--moss-bg);color:var(--moss);border-color:var(--moss);}
+  .sub-status.bad{background:var(--rust-bg);color:var(--rust);border-color:var(--rust);}
 </style>
 </head>
 <body>
@@ -163,6 +166,7 @@
 <div class="modal-overlay" id="settingsOverlay">
   <div class="modal">
     <h2>Reminder settings</h2>
+    <div class="sub-status" id="subStatus">Checking subscription status…</div>
     <div class="toggle-row">
       <span>Nag me about pending tasks</span>
       <label class="switch"><input type="checkbox" id="sEnabled"><span class="slider"></span></label>
@@ -470,6 +474,24 @@ document.getElementById('modalOverlay').onclick = (e)=>{ if(e.target.id==='modal
 
 // ---------------- settings ----------------
 async function loadSettings(){ return api('/api/settings'); }
+async function refreshSubStatus(){
+  const el = document.getElementById('subStatus');
+  el.textContent = 'Checking subscription status…';
+  el.className = 'sub-status';
+  try {
+    const r = await api('/api/subscription-status');
+    if(r.subscribed){
+      el.textContent = '✓ Subscribed — this device is registered to receive alerts.';
+      el.className = 'sub-status ok';
+    } else {
+      el.textContent = '✗ Not subscribed — tap "Enable alerts" on the main screen, alerts will not arrive until you do.';
+      el.className = 'sub-status bad';
+    }
+  } catch(e) {
+    el.textContent = 'Could not check subscription status.';
+    el.className = 'sub-status bad';
+  }
+}
 async function openSettings(){
   const s = await loadSettings();
   document.getElementById('sEnabled').checked = s.enabled;
@@ -479,6 +501,7 @@ async function openSettings(){
   document.getElementById('sEveningTime').value = s.eveningTime;
   document.getElementById('sRandom').checked = s.randomMode;
   document.getElementById('settingsOverlay').classList.add('show');
+  refreshSubStatus();
 }
 document.getElementById('settingsBtn').onclick = openSettings;
 document.getElementById('settingsCancel').onclick = ()=> document.getElementById('settingsOverlay').classList.remove('show');
