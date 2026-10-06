@@ -322,6 +322,8 @@ app.post('/api/settings', (req, res) => {
 
 app.get('/api/vapid-public-key', (req, res) => res.json({ key: VAPID_PUBLIC_KEY }));
 
+app.get('/api/subscription-status', (req, res) => res.json({ subscribed: !!data.subscription }));
+
 app.post('/api/subscribe', (req, res) => {
   data.subscription = req.body;
   saveData(data);
